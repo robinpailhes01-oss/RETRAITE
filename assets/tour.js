@@ -1,6 +1,6 @@
 /* ============================================================
-   NATURE — Visite virtuelle du camp
-   Données des zones + interactions (modale, navigation, timeline)
+   NATURE — Visite virtuelle 360° du camp
+   Moteur : Pannellum (multi-scènes) + navigation + fiches zones
    ============================================================ */
 
 const ZONES = {
@@ -16,7 +16,8 @@ const ZONES = {
       "Premier point de vue sur la vallée"
     ],
     mood: "Transition. Le passage du quotidien au lieu. On ralentit, on respire, on coupe les notifications. Le ton est donné avant même d'avoir posé son sac.",
-    prompt: "Wooden welcome cabin at the entrance of a luxury nature retreat, gravel path leading into a misty pine forest, mountain valley view, warm morning light, minimalist Scandinavian design, cinematic, photoreal --ar 16:9"
+    // Prompt 360° équirectangulaire pour Blockade Labs Skybox AI
+    prompt: "360 equirectangular panorama, wooden welcome cabin at the entrance of a luxury nature retreat, gravel path leading into a misty pine forest, mountain valley in the distance, warm soft morning light, minimalist Scandinavian design, photorealistic, seamless"
   },
   commun: {
     icon: "🍃",
@@ -31,7 +32,7 @@ const ZONES = {
       "Bar à jus / café de spécialité"
     ],
     mood: "Chaleureux et vivant, sans être bruyant. L'odeur du café le matin, le crépitement du feu le soir. Le lieu où naissent les conversations entre entrepreneurs.",
-    prompt: "Open-plan mountain lodge restaurant with floor-to-ceiling windows, communal wooden table, open kitchen, panoramic alpine view, plants, warm pendant lighting, coworking nooks, premium rustic-modern interior, photoreal --ar 16:9"
+    prompt: "360 equirectangular panorama, interior of an open-plan mountain lodge restaurant with floor-to-ceiling windows, communal wooden table, open kitchen, panoramic alpine view, plants, warm pendant lighting, coworking nooks, premium rustic-modern, photorealistic, seamless"
   },
   sport: {
     icon: "🏋",
@@ -46,7 +47,7 @@ const ZONES = {
       "Parcours d'obstacles naturel si le terrain le permet"
     ],
     mood: "Brut et motivant. On s'entraîne face au paysage, au grand air. L'effort partagé crée du lien. Ni salle aseptisée, ni camp militaire — performance et plaisir.",
-    prompt: "Semi-covered outdoor CrossFit box in the mountains, open wooden structure, functional training rig, athletes training at sunrise, dramatic peaks in background, raw premium aesthetic, photoreal, cinematic --ar 16:9"
+    prompt: "360 equirectangular panorama, semi-covered outdoor CrossFit box in the mountains, open wooden structure, functional training rig with barbells and rings, dramatic peaks all around, raw premium aesthetic, sunrise light, photorealistic, seamless"
   },
   wellness: {
     icon: "♨",
@@ -61,7 +62,7 @@ const ZONES = {
       "Deck yoga & méditation au lever du soleil"
     ],
     mood: "Silence et lenteur. La récupération comme un rituel. Vapeur, eau froide, respiration. C'est le contre-poids du sport : ici on répare le corps et on apaise la tête.",
-    prompt: "Finnish sauna with panoramic glass wall overlooking misty mountains, outdoor cold plunge nordic bath, natural swimming pond, wooden deck, steam rising, serene wellness retreat, golden hour, photoreal --ar 16:9"
+    prompt: "360 equirectangular panorama, outdoor wellness deck on a mountainside, Finnish wooden sauna with glass wall, cold plunge nordic bath, natural swimming pond, steam rising, misty peaks, serene golden hour, photorealistic, seamless"
   },
   logements: {
     icon: "🛖",
@@ -76,11 +77,35 @@ const ZONES = {
       "Confort premium : literie haut de gamme, matériaux nobles, énergie autonome"
     ],
     mood: "Intime et spectaculaire. S'endormir sous les étoiles, se réveiller avec la brume sur la vallée. Le luxe, ici, c'est l'espace, le silence et la nature à portée de main.",
-    prompt: "Luxury geodesic dome and design wooden cabins scattered in a pine forest on a mountainside, transparent roof showing stars, private deck, warm interior glow at dusk, secluded, no other buildings in sight, photoreal, cinematic --ar 16:9"
+    prompt: "360 equirectangular panorama, luxury geodesic dome and design wooden cabin scattered in a pine forest on a mountainside, transparent roof, private deck, warm interior glow at dusk, no other buildings in sight, secluded, photorealistic, seamless"
   }
 };
 
 const ORDER = ["entree", "commun", "sport", "wellness", "logements"];
+
+/* Connexions entre zones (d'après le masterplan) + position du point au sol */
+const LINKS = {
+  entree:    [{ to: "commun",   yaw:   0, label: "Vers Le Cœur" }],
+  commun:    [
+    { to: "entree",    yaw: 170, label: "Retour Arrivée" },
+    { to: "sport",     yaw: -80, label: "Vers le Sport" },
+    { to: "wellness",  yaw:  80, label: "Vers le Wellness" },
+    { to: "logements", yaw:  10, label: "Vers les Logements" }
+  ],
+  sport:     [
+    { to: "commun",   yaw:   0, label: "Retour au Cœur" },
+    { to: "wellness", yaw:  70, label: "Vers le Wellness" }
+  ],
+  wellness:  [
+    { to: "commun",    yaw:   0, label: "Retour au Cœur" },
+    { to: "sport",     yaw: -70, label: "Vers le Sport" },
+    { to: "logements", yaw: 120, label: "Vers les Logements" }
+  ],
+  logements: [
+    { to: "commun",   yaw:    0, label: "Retour au Cœur" },
+    { to: "wellness", yaw: -120, label: "Vers le Wellness" }
+  ]
+};
 
 const DAY = [
   { time: "07:00", title: "Réveil en douceur", desc: "Lever du soleil sur la vallée depuis sa cabane. Café de spécialité sur la terrasse du Cœur." },
@@ -94,7 +119,7 @@ const DAY = [
   { time: "20:00", title: "Dîner & feu de camp", desc: "Cuisine du chef autour du feu, échanges, parfois un talk d'un invité. On se couche tôt, bien." }
 ];
 
-/* ---------- Construction de la timeline ---------- */
+/* ---------- Timeline ---------- */
 const tl = document.getElementById("timeline");
 DAY.forEach(d => {
   const li = document.createElement("li");
@@ -105,7 +130,82 @@ DAY.forEach(d => {
   tl.appendChild(li);
 });
 
-/* ---------- Modale de zone ---------- */
+/* ============================================================
+   MOTEUR 360°
+   ============================================================ */
+let viewer = null;
+let current = "entree";
+
+function buildScenes() {
+  const scenes = {};
+  ORDER.forEach(key => {
+    scenes[key] = {
+      type: "equirectangular",
+      panorama: `assets/pano/${key}.jpg`,
+      autoLoad: true,
+      showControls: true,
+      hfov: 110,
+      hotSpots: LINKS[key].map(l => ({
+        pitch: -8,
+        yaw: l.yaw,
+        type: "scene",
+        sceneId: l.to,
+        cssClass: "nav-hotspot",
+        createTooltipFunc: navHotspot,
+        createTooltipArgs: l.label
+      }))
+    };
+  });
+  return scenes;
+}
+
+/* point de navigation personnalisé (pastille "marcher ici") */
+function navHotspot(div, label) {
+  div.classList.add("nav-hotspot");
+  div.innerHTML = `<span class="nav-hotspot__ring"></span><span class="nav-hotspot__lbl">${label}</span>`;
+}
+
+function initViewer() {
+  if (!window.pannellum) { setTimeout(initViewer, 120); return; }
+  viewer = window.pannellum.viewer("pano", {
+    default: {
+      firstScene: "entree",
+      sceneFadeDuration: 900,
+      autoLoad: true,
+      compass: false,
+      showZoomCtrl: true,
+      keyboardZoom: true,
+      hotSpotDebug: false
+    },
+    scenes: buildScenes()
+  });
+  viewer.on("scenechange", id => { current = id; syncHud(id); });
+  syncHud("entree");
+}
+
+function syncHud(key) {
+  const z = ZONES[key];
+  if (!z) return;
+  document.getElementById("tour-eyebrow").textContent = z.eyebrow;
+  document.getElementById("tour-title").textContent = z.title;
+  document.querySelectorAll("#tour-menu button").forEach(b =>
+    b.classList.toggle("is-active", b.dataset.scene === key));
+}
+
+function goScene(key) {
+  current = key;
+  if (viewer) viewer.loadScene(key);
+  else syncHud(key);
+}
+
+/* ---------- Menu des zones ---------- */
+document.querySelectorAll("#tour-menu button").forEach(b => {
+  b.addEventListener("click", () => goScene(b.dataset.scene));
+});
+
+/* ============================================================
+   FICHE DE ZONE (modale)
+   ============================================================ */
 const overlay   = document.getElementById("overlay");
 const elMedia   = document.getElementById("panel-media");
 const elEyebrow = document.getElementById("panel-eyebrow");
@@ -132,43 +232,45 @@ function openZone(key) {
   document.body.style.overflow = "hidden";
   document.getElementById("panel-close").focus();
 }
-
 function closeZone() {
   overlay.hidden = true;
   document.body.style.overflow = "";
   if (lastFocus) lastFocus.focus();
 }
 
-function step(dir) {
-  const cur = overlay.dataset.zone;
-  let i = ORDER.indexOf(cur);
-  i = (i + dir + ORDER.length) % ORDER.length;
-  openZone(ORDER[i]);
-}
+document.getElementById("tour-info").addEventListener("click", () => {
+  lastFocus = document.getElementById("tour-info");
+  openZone(current);
+});
+document.getElementById("panel-close").addEventListener("click", closeZone);
+document.getElementById("panel-visit").addEventListener("click", () => {
+  const key = overlay.dataset.zone;
+  closeZone();
+  goScene(key);
+  document.getElementById("tour").scrollIntoView({ behavior: "smooth" });
+});
+overlay.addEventListener("click", e => { if (e.target === overlay) closeZone(); });
+document.addEventListener("keydown", e => {
+  if (!overlay.hidden && e.key === "Escape") closeZone();
+});
 
-/* ---------- Écouteurs ---------- */
+/* ---------- Masterplan : cliquer une zone => s'y téléporter en 360 ---------- */
 document.querySelectorAll(".zone[data-zone]").forEach(el => {
-  const fire = () => { lastFocus = el; openZone(el.dataset.zone); };
+  const fire = () => {
+    goScene(el.dataset.zone);
+    document.getElementById("tour").scrollIntoView({ behavior: "smooth" });
+  };
   el.addEventListener("click", fire);
   el.addEventListener("keydown", e => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fire(); }
   });
 });
 
-document.getElementById("panel-close").addEventListener("click", closeZone);
-document.getElementById("panel-prev").addEventListener("click", () => step(-1));
-document.getElementById("panel-next").addEventListener("click", () => step(1));
-overlay.addEventListener("click", e => { if (e.target === overlay) closeZone(); });
-document.addEventListener("keydown", e => {
-  if (overlay.hidden) return;
-  if (e.key === "Escape") closeZone();
-  if (e.key === "ArrowRight") step(1);
-  if (e.key === "ArrowLeft") step(-1);
+/* ---------- Hero -> scroll ---------- */
+document.querySelectorAll("[data-goto]").forEach(b => {
+  b.addEventListener("click", () =>
+    document.getElementById(b.dataset.goto).scrollIntoView({ behavior: "smooth" }));
 });
 
-/* ---------- Hero -> scroll vers la carte ---------- */
-document.querySelectorAll("[data-goto]").forEach(b => {
-  b.addEventListener("click", () => {
-    document.getElementById(b.dataset.goto).scrollIntoView({ behavior: "smooth" });
-  });
-});
+/* ---------- Go ---------- */
+initViewer();

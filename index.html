@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Visite virtuelle — Retraite premium sport, wellness & nature. Logements insolites, CrossFit outdoor, bains nordiques, en pleine montagne." />
-  <title>NATURE&nbsp;· Visite virtuelle du camp</title>
+  <meta name="description" content="Visite virtuelle 360° — Retraite premium sport, wellness & nature. Logements insolites, CrossFit outdoor, bains nordiques, en pleine montagne." />
+  <title>NATURE · Visite virtuelle 360° du camp</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <!-- Moteur de visite 360° (Pannellum) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
@@ -16,26 +19,54 @@
   <section id="hero" class="hero">
     <div class="hero__veil"></div>
     <div class="hero__content">
-      <p class="eyebrow">Visite virtuelle · projet en conception</p>
+      <p class="eyebrow">Visite virtuelle 360° · projet en conception</p>
       <h1 class="hero__title">Le Camp</h1>
       <p class="hero__sub">Une retraite premium en pleine montagne.<br />Sport · Wellness · Nature · Entrepreneuriat.</p>
-      <button class="btn btn--primary" data-goto="map">Entrer dans le camp →</button>
-      <p class="hero__hint">Concept &amp; masterplan — version de travail</p>
+      <button class="btn btn--primary" data-goto="tour">Démarrer la visite 360° →</button>
+      <p class="hero__hint">Tourne à 360° · clique pour te déplacer de zone en zone</p>
     </div>
     <div class="hero__scroll">↓</div>
   </section>
 
-  <!-- ░░░ MASTERPLAN INTERACTIF ░░░ -->
+  <!-- ░░░ VISITE 360° ░░░ -->
+  <section id="tour" class="tour">
+    <div class="tour__stage">
+      <div id="pano" class="pano"></div>
+
+      <!-- overlay : nom de la zone -->
+      <div class="tour__hud tour__hud--title">
+        <p class="eyebrow" id="tour-eyebrow">Le seuil</p>
+        <h2 id="tour-title">L'Arrivée</h2>
+      </div>
+
+      <!-- overlay : bouton détails -->
+      <button class="btn btn--glass tour__hud tour__hud--info" id="tour-info">ℹ Détails de la zone</button>
+
+      <!-- overlay : menu des zones -->
+      <nav class="tour__menu" id="tour-menu" aria-label="Aller à une zone">
+        <button data-scene="entree">⛩ Arrivée</button>
+        <button data-scene="commun">🍃 Le Cœur</button>
+        <button data-scene="sport">🏋 Sport</button>
+        <button data-scene="wellness">♨ Wellness</button>
+        <button data-scene="logements">🛖 Logements</button>
+      </nav>
+
+      <!-- fallback si le moteur 360 ne charge pas -->
+      <noscript><p class="pano__fallback">Active JavaScript pour lancer la visite 360°.</p></noscript>
+    </div>
+    <p class="tour__hint">🖱️ Glisse pour regarder autour de toi · 🟢 clique sur un point au sol pour avancer · ou utilise le menu ci-dessus.</p>
+  </section>
+
+  <!-- ░░░ MASTERPLAN ░░░ -->
   <section id="map" class="map">
     <header class="section-head">
       <p class="eyebrow">Le plan du site</p>
-      <h2>Promène-toi dans le camp</h2>
-      <p class="lede">Clique sur une zone pour la découvrir. Les logements sont <em>dispersés</em> dans la nature, la zone sport est à l'écart, le wellness occupe le point calme avec vue, et le restaurant est le cœur social où tout le monde se croise.</p>
+      <h2>Le plan du camp</h2>
+      <p class="lede">Clique sur une zone pour t'y téléporter dans la visite 360°. Les logements sont <em>dispersés</em> dans la nature, la zone sport est à l'écart, le wellness occupe le point calme avec vue, et le restaurant est le cœur social où tout le monde se croise.</p>
     </header>
 
     <div class="map__wrap">
       <svg viewBox="0 0 1000 640" class="masterplan" role="img" aria-label="Plan du camp" xmlns="http://www.w3.org/2000/svg">
-        <!-- relief / fonds -->
         <defs>
           <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#bcd0c7"/>
@@ -45,56 +76,42 @@
             <stop offset="0" stop-color="#33503f"/>
             <stop offset="1" stop-color="#26412f"/>
           </linearGradient>
-          <radialGradient id="lake" cx="0.5" cy="0.4" r="0.7">
-            <stop offset="0" stop-color="#7fb4c4"/>
-            <stop offset="1" stop-color="#4d8497"/>
-          </radialGradient>
         </defs>
-
         <rect width="1000" height="640" fill="url(#sky)"/>
-        <!-- montagnes en fond -->
         <path d="M0,210 L150,90 L260,200 L390,70 L520,210 L640,110 L780,220 L900,120 L1000,200 L1000,0 L0,0 Z" fill="#a9bdb2" opacity="0.55"/>
         <path d="M0,250 L120,160 L280,250 L430,150 L560,250 L700,170 L860,260 L1000,180 L1000,0 L0,0 Z" fill="#94ad9f" opacity="0.4"/>
-        <!-- forêt -->
         <path d="M0,240 C200,200 320,300 500,260 C680,220 820,300 1000,250 L1000,640 L0,640 Z" fill="url(#forest)" opacity="0.18"/>
 
-        <!-- sentiers -->
         <g class="paths" fill="none" stroke="#c9b79a" stroke-width="7" stroke-linecap="round" stroke-dasharray="2 14" opacity="0.9">
-          <path d="M150,560 C300,520 380,470 470,430"/>      <!-- entrée -> restaurant -->
-          <path d="M470,430 C560,360 640,340 720,300"/>       <!-- restaurant -> wellness -->
-          <path d="M470,430 C360,400 300,340 250,290"/>       <!-- restaurant -> sport -->
-          <path d="M470,430 C520,470 600,500 690,520"/>       <!-- restaurant -> logement A -->
-          <path d="M470,430 C430,500 360,520 300,540"/>       <!-- restaurant -> logement B -->
-          <path d="M470,430 C600,420 720,440 820,470"/>       <!-- restaurant -> logement C -->
-          <path d="M470,430 C540,330 560,250 600,190"/>       <!-- restaurant -> logement D -->
+          <path d="M150,560 C300,520 380,470 470,430"/>
+          <path d="M470,430 C560,360 640,340 720,300"/>
+          <path d="M470,430 C360,400 300,340 250,290"/>
+          <path d="M470,430 C520,470 600,500 690,520"/>
+          <path d="M470,430 C430,500 360,520 300,540"/>
+          <path d="M470,430 C600,420 720,440 820,470"/>
+          <path d="M470,430 C540,330 560,250 600,190"/>
         </g>
 
-        <!-- ZONES cliquables -->
-        <!-- Entrée -->
         <g class="zone" data-zone="entree" tabindex="0" role="button" aria-label="Arrivée et accueil">
           <circle cx="150" cy="565" r="34"/>
           <text x="150" y="570" class="z-ico">⛩</text>
           <text x="150" y="620" class="z-lbl">Arrivée</text>
         </g>
-        <!-- Restaurant / commun (centre) -->
         <g class="zone zone--hub" data-zone="commun" tabindex="0" role="button" aria-label="Restaurant et espace commun">
           <circle cx="470" cy="430" r="44"/>
           <text x="470" y="436" class="z-ico">🍃</text>
           <text x="470" y="492" class="z-lbl">Le Cœur · Resto &amp; Coworking</text>
         </g>
-        <!-- Sport -->
         <g class="zone" data-zone="sport" tabindex="0" role="button" aria-label="Zone sport">
           <circle cx="250" cy="285" r="38"/>
           <text x="250" y="291" class="z-ico">🏋</text>
           <text x="250" y="338" class="z-lbl">Sport</text>
         </g>
-        <!-- Wellness -->
         <g class="zone" data-zone="wellness" tabindex="0" role="button" aria-label="Zone wellness">
           <circle cx="730" cy="295" r="40"/>
           <text x="730" y="301" class="z-ico">♨</text>
           <text x="730" y="348" class="z-lbl">Wellness</text>
         </g>
-        <!-- Logements dispersés -->
         <g class="zone zone--lodge" data-zone="logements" tabindex="0" role="button" aria-label="Logements insolites">
           <circle cx="695" cy="522" r="26"/><text x="695" y="528" class="z-ico sm">🛖</text>
         </g>
@@ -154,20 +171,19 @@
           </div>
         </div>
         <details class="panel__prompt">
-          <summary>🎨 Prompt visuel IA (Midjourney / Nano Banana)</summary>
+          <summary>🎨 Prompt 360° pour Skybox AI (à copier)</summary>
           <p id="panel-prompt"></p>
         </details>
         <nav class="panel__nav">
-          <button class="btn btn--ghost" id="panel-prev">← Précédent</button>
-          <button class="btn btn--ghost" id="panel-next">Suivant →</button>
+          <button class="btn btn--ghost" id="panel-visit">↪ Visiter cette zone en 360°</button>
         </nav>
       </div>
     </div>
   </div>
 
   <footer class="foot">
-    <p><strong>NATURE</strong> — visite virtuelle de travail · v0.1</p>
-    <p>Projet de vie de Robin · conçu pour évoluer. Prochaine étape : choisir la localisation et générer les visuels IA de chaque zone.</p>
+    <p><strong>NATURE</strong> — visite virtuelle 360° · v0.2</p>
+    <p>Les panoramas actuels sont des <strong>placeholders</strong>. Génère tes images 360° avec Skybox AI (prompts dans chaque zone) et dépose-les dans <code>assets/pano/</code> — elles remplacent les placeholders automatiquement.</p>
   </footer>
 
   <script src="assets/tour.js"></script>
